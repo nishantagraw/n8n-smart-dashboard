@@ -1,0 +1,459 @@
+{
+  "id": "dashboard-direct-001",
+  "name": "Dashboard Direct Router",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dash-calendar",
+        "responseMode": "lastNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "d1000001-0001-4001-8001-000000000001",
+      "name": "Calendar Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        200
+      ],
+      "webhookId": "dash-calendar"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dash-sheets",
+        "responseMode": "lastNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "d1000001-0002-4002-8002-000000000002",
+      "name": "Sheets Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        500
+      ],
+      "webhookId": "dash-sheets"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dash-email",
+        "responseMode": "lastNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "d1000001-0003-4003-8003-000000000003",
+      "name": "Email Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        800
+      ],
+      "webhookId": "dash-email"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dash-drive",
+        "responseMode": "lastNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "d1000001-0004-4004-8004-000000000004",
+      "name": "Drive Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        1100
+      ],
+      "webhookId": "dash-drive"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst b = input.body || input;\nconst date = b.date || '2026-01-01';\nconst time = b.time || '09:00';\nconst endTime = b.endTime || '10:00';\nconst endDate = b.endDate || date;\nconst startUTC = new Date(date + 'T' + time + ':00+05:30').toISOString();\nconst endUTC = new Date(endDate + 'T' + endTime + ':00+05:30').toISOString();\nreturn [{ json: {\n  start: startUTC,\n  end: endUTC,\n  title: b.title || 'Event',\n  description: b.description || '',\n  location: b.location || ''\n}}];"
+      },
+      "id": "d1000001-0015-4015-8015-000000000015",
+      "name": "Prepare Calendar Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "event",
+        "operation": "create",
+        "calendar": {
+          "__rl": true,
+          "mode": "list",
+          "value": "primary"
+        },
+        "start": "={{ $json.start }}",
+        "end": "={{ $json.end }}",
+        "additionalFields": {
+          "summary": "={{ $json.title }}",
+          "description": "={{ $json.description }}",
+          "location": "={{ $json.location }}"
+        }
+      },
+      "id": "d1000001-0005-4005-8005-000000000005",
+      "name": "Create Calendar Event",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.2,
+      "position": [
+        680,
+        200
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "prkT6e3bbfS3cg5M",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst b = input.body || input;\nconst now = new Date().toISOString();\nreturn [{ json: {\n  Timestamp: now,\n  Name: b.name || '',\n  Phone: b.phone || '',\n  Category: b.category || '',\n  Amount: b.amount || '',\n  Notes: b.notes || ''\n}}];"
+      },
+      "id": "d1000001-0006-4006-8006-000000000006",
+      "name": "Format Sheet Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        540,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1seChvROZ6Xe3GLlb0_HsFnkWGZT8z76MH8nKg_9KX9g/values/Sheet1!A1:append?valueInputOption=USER_ENTERED",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"values\": [\n    [\n      \"{{$json.Timestamp}}\",\n      \"{{$json.Name}}\",\n      \"{{$json.Phone}}\",\n      \"{{$json.Category}}\",\n      \"{{$json.Amount}}\",\n      \"{{$json.Notes}}\"\n    ]\n  ]\n}",
+        "options": {}
+      },
+      "id": "newid-242901773780951313",
+      "name": "Google Sheets Append",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        780,
+        500
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OFkgEIbPL3oJ3I0y",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst b = input.body || input;\nreturn [{ json: { to: b.to, subject: b.subject, body: b.body || '(No body)' } }];"
+      },
+      "id": "d1000001-0016-4016-8016-000000000016",
+      "name": "Prepare Email Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "text",
+        "message": "={{ $json.body }}",
+        "options": {}
+      },
+      "id": "d1000001-0008-4008-8008-000000000008",
+      "name": "Send Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        680,
+        800
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "QO3PmTvJirU8XMgq",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst b = input.body || input;\nlet binary;\n\nif (b.fileData && b.fileData.startsWith('data:')) {\n  const parts = b.fileData.split(',');\n  const meta = parts[0];\n  const base64Data = parts[1];\n  const mimeMatch = meta.match(/data:(.*?);/);\n  const mimeType = mimeMatch ? mimeMatch[1] : 'application/octet-stream';\n  const ext = mimeType.split('/')[1] || 'bin';\n  const fileName = b.fileName || ('upload.' + ext);\n  binary = { data: { data: base64Data, mimeType: mimeType, fileName: fileName, fileExtension: ext } };\n} else {\n  const content = b.content || b.notes || 'Empty note';\n  const buffer = Buffer.from(content, 'utf-8');\n  const fileName = (b.fileName || 'note') + '.txt';\n  binary = { data: { data: buffer.toString('base64'), mimeType: 'text/plain', fileName: fileName, fileExtension: 'txt' } };\n}\n\nreturn [{ json: { fileName: b.fileName || 'upload', folder: b.folder || '' }, binary: binary }];"
+      },
+      "id": "d1000001-0009-4009-8009-000000000009",
+      "name": "Prepare Drive File",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        540,
+        1100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "name": "={{ $json.fileName }}",
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "root"
+        },
+        "options": {}
+      },
+      "id": "d1000001-0010-4010-8010-000000000010",
+      "name": "Upload to Google Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        780,
+        1100
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "3StHgIJPn8wtSX5s",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const event = $input.first().json;\nreturn [{ json: { success: true, message: 'Calendar event created!', eventId: event.id || '', summary: event.summary || '' } }];"
+      },
+      "id": "d1000001-0011-4011-8011-000000000011",
+      "name": "Calendar Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { success: true, message: 'Email sent successfully!' } }];"
+      },
+      "id": "d1000001-0012-4012-8012-000000000012",
+      "name": "Email Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.first().json;\nreturn [{ json: { success: true, message: 'File uploaded to Drive!', fileId: result.id || '', fileName: result.name || '' } }];"
+      },
+      "id": "d1000001-0013-4013-8013-000000000013",
+      "name": "Drive Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1020,
+        1100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { success: true, message: 'Data added to Google Sheet!' } }];"
+      },
+      "id": "d1000001-0014-4014-8014-000000000014",
+      "name": "Sheets Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1020,
+        500
+      ]
+    }
+  ],
+  "connections": {
+    "Calendar Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Calendar Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Calendar Data": {
+      "main": [
+        [
+          {
+            "node": "Create Calendar Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Calendar Event": {
+      "main": [
+        [
+          {
+            "node": "Calendar Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets Webhook": {
+      "main": [
+        [
+          {
+            "node": "Format Sheet Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Sheet Row": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets Append",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets Append": {
+      "main": [
+        [
+          {
+            "node": "Sheets Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Email Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Email Data": {
+      "main": [
+        [
+          {
+            "node": "Send Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Gmail": {
+      "main": [
+        [
+          {
+            "node": "Email Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Drive Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Drive File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Drive File": {
+      "main": [
+        [
+          {
+            "node": "Upload to Google Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload to Google Drive": {
+      "main": [
+        [
+          {
+            "node": "Drive Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

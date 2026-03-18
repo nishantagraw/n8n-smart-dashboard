@@ -1,0 +1,10 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "n8n start"
+restartPolicyType = "ON_FAILURE"
+
+[deploy.volumes]
+data = "/home/node/.n8n"

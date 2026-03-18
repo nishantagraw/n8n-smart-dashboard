@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Data Router - Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a2e;
+            --bg-input: #16162a;
+            --border: #2a2a4a;
+            --text-primary: #e8e8f0;
+            --text-secondary: #8888aa;
+            --text-muted: #555577;
+            --accent-blue: #4f7df9;
+            --accent-purple: #7c3aed;
+            --accent-green: #10b981;
+            --accent-orange: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-pink: #ec4899;
+            --gradient-1: linear-gradient(135deg, #4f7df9 0%, #7c3aed 100%);
+            --gradient-2: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+            --gradient-3: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+            --gradient-4: linear-gradient(135deg, #ec4899 0%, #7c3aed 100%);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-primary); color: var(--text-primary);
+            min-height: 100vh; overflow-x: hidden;
+        }
+        body::before {
+            content: ''; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: 
+                radial-gradient(ellipse at 20% 20%, rgba(79, 125, 249, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(124, 58, 237, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(16, 185, 129, 0.04) 0%, transparent 50%);
+            pointer-events: none; z-index: 0;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 30px 20px; position: relative; z-index: 1; }
+        .header { text-align: center; margin-bottom: 40px; }
+        .header-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: rgba(79, 125, 249, 0.1); border: 1px solid rgba(79, 125, 249, 0.2);
+            padding: 6px 16px; border-radius: 50px; font-size: 12px; font-weight: 500;
+            color: var(--accent-blue); margin-bottom: 16px; letter-spacing: 0.5px; text-transform: uppercase;
+        }
+        .header-badge .dot { width: 8px; height: 8px; background: var(--accent-green); border-radius: 50%; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .header h1 {
+            font-size: 36px; font-weight: 800;
+            background: var(--gradient-1); -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent; margin-bottom: 8px;
+        }
+        .header p { color: var(--text-secondary); font-size: 15px; }
+        .status-bar { display: flex; justify-content: center; gap: 24px; margin-bottom: 36px; flex-wrap: wrap; }
+        .status-pill {
+            display: flex; align-items: center; gap: 8px; padding: 8px 16px;
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 50px; font-size: 13px; color: var(--text-secondary);
+        }
+        .status-pill .icon { font-size: 16px; }
+        .status-pill.active { border-color: rgba(16, 185, 129, 0.3); color: var(--accent-green); }
+        .send-all-container { text-align: center; margin-bottom: 36px; }
+        .btn-send-all {
+            padding: 16px 48px; font-size: 16px; font-weight: 700; font-family: 'Inter', sans-serif;
+            border: none; border-radius: 16px; cursor: pointer; background: var(--gradient-1);
+            color: white; transition: all 0.3s ease; box-shadow: 0 4px 20px rgba(79, 125, 249, 0.3);
+        }
+        .btn-send-all:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(79, 125, 249, 0.4); }
+        .btn-send-all:active { transform: translateY(0); }
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+        @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+        .card {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px;
+            padding: 28px; transition: all 0.3s ease; position: relative; overflow: hidden;
+        }
+        .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: 20px 20px 0 0; }
+        .card:hover { transform: translateY(-4px); border-color: rgba(255,255,255,0.1); }
+        .card.sheets::before { background: var(--gradient-2); }
+        .card.sheets:hover { box-shadow: 0 0 30px rgba(16, 185, 129, 0.15); }
+        .card.email::before { background: var(--gradient-3); }
+        .card.email:hover { box-shadow: 0 0 30px rgba(245, 158, 11, 0.15); }
+        .card.calendar::before { background: var(--gradient-1); }
+        .card.calendar:hover { box-shadow: 0 0 30px rgba(79, 125, 249, 0.15); }
+        .card.drive::before { background: var(--gradient-4); }
+        .card.drive:hover { box-shadow: 0 0 30px rgba(236, 72, 153, 0.15); }
+        .card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+        .card-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+        .card.sheets .card-icon { background: rgba(16, 185, 129, 0.12); }
+        .card.email .card-icon { background: rgba(245, 158, 11, 0.12); }
+        .card.calendar .card-icon { background: rgba(79, 125, 249, 0.12); }
+        .card.drive .card-icon { background: rgba(236, 72, 153, 0.12); }
+        .card-title { font-size: 18px; font-weight: 700; }
+        .card-subtitle { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        input, textarea, select {
+            width: 100%; padding: 12px 14px; background: var(--bg-input);
+            border: 1px solid var(--border); border-radius: 10px; color: var(--text-primary);
+            font-family: 'Inter', sans-serif; font-size: 14px; transition: all 0.2s ease; outline: none;
+        }
+        input:focus, textarea:focus, select:focus { border-color: var(--accent-blue); box-shadow: 0 0 0 3px rgba(79, 125, 249, 0.1); }
+        input::placeholder, textarea::placeholder { color: var(--text-muted); }
+        textarea { min-height: 80px; resize: vertical; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .btn-send {
+            width: 100%; padding: 12px; font-size: 14px; font-weight: 600; font-family: 'Inter', sans-serif;
+            border: none; border-radius: 12px; cursor: pointer; color: white; transition: all 0.3s ease;
+            margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .card.sheets .btn-send { background: var(--gradient-2); }
+        .card.email .btn-send { background: var(--gradient-3); }
+        .card.calendar .btn-send { background: var(--gradient-1); }
+        .card.drive .btn-send { background: var(--gradient-4); }
+        .btn-send:hover { transform: translateY(-1px); opacity: 0.95; }
+        .btn-send:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-send .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top: 2px solid white; border-radius: 50%; animation: spin 0.8s linear infinite; display: none; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
+        .toast {
+            padding: 14px 20px; border-radius: 12px; font-size: 14px; font-weight: 500; color: white;
+            animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: var(--shadow);
+            display: flex; align-items: center; gap: 10px; min-width: 300px; max-width: 450px;
+        }
+        .toast.success { background: linear-gradient(135deg, #059669, #10b981); }
+        .toast.error { background: linear-gradient(135deg, #dc2626, #ef4444); }
+        .toast.info { background: linear-gradient(135deg, #2563eb, #4f7df9); }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+        .log-section { margin-top: 36px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 28px; }
+        .log-section h3 { font-size: 16px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        .log-entries { max-height: 300px; overflow-y: auto; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 12px; }
+        .log-entry { padding: 10px 14px; background: var(--bg-primary); border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--accent-blue); color: var(--text-secondary); line-height: 1.5; }
+        .log-entry.success { border-left-color: var(--accent-green); }
+        .log-entry.error { border-left-color: var(--accent-red); }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        .footer { text-align: center; padding: 30px 0 10px; color: var(--text-muted); font-size: 12px; }
+        .footer a { color: var(--accent-blue); text-decoration: none; }
+        .dropzone {
+            border: 2px dashed var(--border); border-radius: 12px; padding: 24px; text-align: center;
+            cursor: pointer; transition: all 0.3s ease; background: var(--bg-input); margin-bottom: 14px;
+        }
+        .dropzone:hover, .dropzone.dragover { border-color: var(--accent-pink); background: rgba(236, 72, 153, 0.05); }
+        .dropzone .drop-icon { font-size: 36px; margin-bottom: 8px; }
+        .dropzone .drop-text { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+        .dropzone .drop-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+        .file-preview { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--bg-primary); border-radius: 10px; margin-bottom: 10px; border: 1px solid var(--border); }
+        .file-preview .file-icon { font-size: 24px; }
+        .file-preview .file-info { flex: 1; }
+        .file-preview .file-name { font-size: 13px; font-weight: 600; }
+        .file-preview .file-size { font-size: 11px; color: var(--text-muted); }
+        .file-preview .file-remove { width: 28px; height: 28px; background: rgba(239,68,68,0.15); border: none; border-radius: 8px; color: var(--accent-red); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+        .file-preview .file-remove:hover { background: rgba(239,68,68,0.3); }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-badge"><span class="dot"></span> direct workflow active</div>
+            <h1>🤖 Smart Data Router</h1>
+            <p>Fill in any section and click Send — completely bypasses AI for 100% reliability</p>
+        </div>
+        <div class="status-bar">
+            <div class="status-pill active"><span class="icon">📊</span> Sheets</div>
+            <div class="status-pill active"><span class="icon">📧</span> Gmail</div>
+            <div class="status-pill active"><span class="icon">📅</span> Calendar</div>
+            <div class="status-pill active"><span class="icon">📁</span> Drive</div>
+        </div>
+        <div class="send-all-container">
+            <button class="btn-send-all" onclick="sendAll()">⚡ Send All Filled Sections</button>
+        </div>
+        <div class="grid">
+            <!-- Sheets -->
+            <div class="card sheets" id="card-sheets">
+                <div class="card-header">
+                    <div class="card-icon">📊</div>
+                    <div><div class="card-title">Google Sheets</div><div class="card-subtitle">Add data entry directly</div></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Name</label><input type="text" id="sheet-name" placeholder="John Doe"></div>
+                    <div class="form-group"><label>Phone Number</label><input type="text" id="sheet-phone" placeholder="+91 9876543210"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Category</label>
+                        <select id="sheet-category"><option>Contact</option><option>Expense</option><option>Lead</option><option>Client</option><option>Other</option></select>
+                    </div>
+                    <div class="form-group"><label>Amount (₹)</label><input type="text" id="sheet-amount" placeholder="0"></div>
+                </div>
+                <div class="form-group"><label>Notes</label><input type="text" id="sheet-notes" placeholder="Additional details..."></div>
+                <button class="btn-send" onclick="sendSheets()"><span class="spinner" id="spin-sheets"></span>📊 Send to Sheets</button>
+            </div>
+            <!-- Gmail -->
+            <div class="card email" id="card-email">
+                <div class="card-header">
+                    <div class="card-icon">📧</div>
+                    <div><div class="card-title">Gmail</div><div class="card-subtitle">Send an email instantly direct</div></div>
+                </div>
+                <div class="form-group"><label>To (Email Address)</label><input type="email" id="email-to" placeholder="someone@gmail.com"></div>
+                <div class="form-group"><label>Subject</label><input type="text" id="email-subject" placeholder="Meeting Tomorrow"></div>
+                <div class="form-group"><label>Message Body</label><textarea id="email-body" placeholder="Hi there, I wanted to reach out..."></textarea></div>
+                <button class="btn-send" onclick="sendEmail()"><span class="spinner" id="spin-email"></span>📧 Send Email</button>
+            </div>
+            <!-- Calendar -->
+            <div class="card calendar" id="card-calendar">
+                <div class="card-header">
+                    <div class="card-icon">📅</div>
+                    <div><div class="card-title">Google Calendar</div><div class="card-subtitle">Create a calendar event direct</div></div>
+                </div>
+                <div class="form-group"><label>Event Title</label><input type="text" id="cal-title" placeholder="Team Meeting"></div>
+                <div class="form-row">
+                    <div class="form-group"><label>Date</label><input type="date" id="cal-date"></div>
+                    <div class="form-group"><label>Start Time</label><input type="time" id="cal-time" value="09:00"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Duration</label>
+                        <select id="cal-duration"><option value="30">30 min</option><option value="60" selected>1 hour</option><option value="90">1.5 hours</option><option value="120">2 hours</option></select>
+                    </div>
+                    <div class="form-group"><label>Location</label><input type="text" id="cal-location" placeholder="Office / Zoom link"></div>
+                </div>
+                <div class="form-group"><label>Description</label><input type="text" id="cal-desc" placeholder="Discuss Q2 targets..."></div>
+                <button class="btn-send" onclick="sendCalendar()"><span class="spinner" id="spin-calendar"></span>📅 Create Event</button>
+            </div>
+            <!-- Drive -->
+            <div class="card drive" id="card-drive">
+                <div class="card-header">
+                    <div class="card-icon">📁</div>
+                    <div><div class="card-title">Google Drive</div><div class="card-subtitle">Upload files direct</div></div>
+                </div>
+                <div class="dropzone" id="drive-dropzone" onclick="document.getElementById('drive-file-input').click()">
+                    <div class="drop-icon">📎</div>
+                    <div class="drop-text">Drop files here or click to browse</div>
+                    <div class="drop-hint">Images, Videos, PDFs, Documents</div>
+                </div>
+                <input type="file" id="drive-file-input" class="hidden" multiple onchange="handleFileSelect(event)">
+                <div id="file-preview-container"></div>
+                <div class="form-row">
+                    <div class="form-group"><label>File Name (optional)</label><input type="text" id="drive-filename" placeholder="Auto from file"></div>
+                    <div class="form-group"><label>Folder</label><input type="text" id="drive-folder" placeholder="WhatsApp Uploads"></div>
+                </div>
+                <div class="form-group"><label>Notes / Text to save</label><textarea id="drive-content" placeholder="Type notes, or leave empty if uploading a file..." rows="3"></textarea></div>
+                <button class="btn-send" onclick="sendDrive()"><span class="spinner" id="spin-drive"></span>📁 Save to Drive</button>
+            </div>
+        </div>
+        <div class="log-section">
+            <h3>📋 Activity Log</h3>
+            <div class="log-entries" id="log-entries">
+                <div class="log-entry"><span class="time">[Ready]</span> Dashboard loaded. Send directly to endpoints.</div>
+            </div>
+        </div>
+        <div class="footer">Powered by <a href="http://localhost:5678" target="_blank">n8n</a> (Direct Endpoints) &bull; Infinite Club &copy; 2026</div>
+    </div>
+    <div class="toast-container" id="toast-container"></div>
+
+    <script>
+        document.getElementById('cal-date').valueAsDate = new Date();
+
+        async function sendToWebhook(path, data, type, spinId) {
+            const spinner = document.getElementById(spinId);
+            if (spinner) spinner.style.display = 'block';
+            try {
+                // Ensure the payload matches exactly what n8n node expects in $json
+                const r = await fetch('http://localhost:5678/webhook/' + path, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (r.ok) {
+                    showToast(`✅ ${type} saved straight to Google!`, 'success');
+                    addLog(type, 'Success storing to ' + type, 'success');
+                    return true;
+                } else {
+                    showToast(`❌ ${type} failed to save`, 'error');
+                    addLog(type, 'Error saving: ' + r.status, 'error');
+                    return false;
+                }
+            } catch (e) {
+                showToast(`❌ ${type}: Connection error`, 'error');
+                addLog(type, 'Network Error: ' + e.message, 'error');
+                return false;
+            } finally {
+                if (spinner) spinner.style.display = 'none';
+            }
+        }
+
+        // === SHEETS ===
+        async function sendSheets() {
+            const name = document.getElementById('sheet-name').value;
+            const phone = document.getElementById('sheet-phone').value;
+            if (!name && !phone) { showToast('⚠️ Enter Name or Phone', 'error'); return; }
+            
+            const payload = {
+                name: document.getElementById('sheet-name').value,
+                phone: document.getElementById('sheet-phone').value,
+                category: document.getElementById('sheet-category').value,
+                amount: document.getElementById('sheet-amount').value,
+                notes: document.getElementById('sheet-notes').value
+            };
+            if (await sendToWebhook('dash-sheets', payload, 'Sheets', 'spin-sheets')) clearSection('sheets');
+        }
+
+        // === EMAIL ===
+        async function sendEmail() {
+            const to = document.getElementById('email-to').value;
+            if (!to) { showToast('⚠️ Enter destination email', 'error'); return; }
+            
+            const payload = {
+                to: document.getElementById('email-to').value,
+                subject: document.getElementById('email-subject').value || "No Subject",
+                body: document.getElementById('email-body').value || "No Body"
+            };
+            if (await sendToWebhook('dash-email', payload, 'Email', 'spin-email')) clearSection('email');
+        }
+
+        // === CALENDAR ===
+        async function sendCalendar() {
+            const title = document.getElementById('cal-title').value;
+            const date = document.getElementById('cal-date').value;
+            if (!title || !date) { showToast('⚠️ Enter a title and date', 'error'); return; }
+            
+            const time = document.getElementById('cal-time').value || '09:00';
+            const dur = parseInt(document.getElementById('cal-duration').value);
+            const [h, m] = time.split(':').map(Number);
+            const endMin = h * 60 + m + dur;
+            const endH = String(Math.floor(endMin / 60) % 24).padStart(2, '0');
+            const endM = String(endMin % 60).padStart(2, '0');
+            const endTime = `${endH}:${endM}`;
+            
+            const payload = {
+                title: document.getElementById('cal-title').value,
+                date: document.getElementById('cal-date').value,
+                time: time,
+                endDate: document.getElementById('cal-date').value,
+                endTime: endTime,
+                location: document.getElementById('cal-location').value,
+                description: document.getElementById('cal-desc').value
+            };
+            if (await sendToWebhook('dash-calendar', payload, 'Calendar', 'spin-calendar')) clearSection('calendar');
+        }
+
+        // === DRIVE ===
+        let uploadedFiles = [];
+        function handleFileSelect(e) { Array.from(e.target.files).forEach(addFile); }
+        function addFile(file) {
+            const reader = new FileReader();
+            reader.onload = e => { uploadedFiles.push({ name: file.name, size: file.size, type: file.type, data: e.target.result }); renderFiles(); };
+            reader.readAsDataURL(file);
+        }
+        function removeFile(i) { uploadedFiles.splice(i, 1); renderFiles(); }
+        function renderFiles() {
+            const c = document.getElementById('file-preview-container');
+            c.innerHTML = uploadedFiles.map((f, i) => `<div class="file-preview"><span class="file-icon">${fileIcon(f.type)}</span><div class="file-info"><div class="file-name">${f.name}</div><div class="file-size">${fmtSize(f.size)}</div></div><button class="file-remove" onclick="removeFile(${i})">✕</button></div>`).join('');
+            if (uploadedFiles.length && !document.getElementById('drive-filename').value)
+                document.getElementById('drive-filename').value = uploadedFiles[0].name.replace(/\.[^.]+$/, '');
+        }
+        function fileIcon(t) { if (!t) return '📄'; if (t.startsWith('image/')) return '🖼️'; if (t.startsWith('video/')) return '🎬'; if (t.includes('pdf')) return '📕'; return '📄'; }
+        function fmtSize(b) { if (b < 1024) return b + 'B'; if (b < 1048576) return (b/1024).toFixed(1) + 'KB'; return (b/1048576).toFixed(1) + 'MB'; }
+
+        const dz = document.getElementById('drive-dropzone');
+        dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+        dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+        dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('dragover'); Array.from(e.dataTransfer.files).forEach(addFile); });
+
+        async function sendDrive() {
+            const folder = document.getElementById('drive-folder').value;
+            const content = document.getElementById('drive-content').value;
+            let success = true;
+
+            if (uploadedFiles.length > 0) {
+                for (let i = 0; i < uploadedFiles.length; i++) {
+                    const f = uploadedFiles[i];
+                    const fn = document.getElementById('drive-filename').value || f.name;
+                    const payload = {
+                        content: content,
+                        folder: folder,
+                        fileName: fn,
+                        fileData: f.data
+                    };
+                    if (!await sendToWebhook('dash-drive', payload, 'Drive File', 'spin-drive')) {
+                        success = false;
+                    }
+                    await sleep(500);
+                }
+                if (success) {
+                    uploadedFiles = []; renderFiles(); clearSection('drive');
+                }
+            } else {
+                if (!content) { showToast('⚠️ Add content or a file', 'error'); return; }
+                const fn = document.getElementById('drive-filename').value || 'note';
+                const payload = {
+                    content: content,
+                    folder: folder,
+                    fileName: fn
+                };
+                if (await sendToWebhook('dash-drive', payload, 'Drive Note', 'spin-drive')) clearSection('drive');
+            }
+        }
+
+        // === SEND ALL ===
+        async function sendAll() {
+            let sent = 0;
+            const btn = document.querySelector('.btn-send-all');
+            btn.textContent = '⏳ Sending...'; btn.disabled = true;
+            if (document.getElementById('sheet-name').value || document.getElementById('sheet-phone').value) { await sendSheets(); sent++; await sleep(500); }
+            if (document.getElementById('email-to').value && document.getElementById('email-subject').value) { await sendEmail(); sent++; await sleep(500); }
+            if (document.getElementById('cal-title').value && document.getElementById('cal-date').value) { await sendCalendar(); sent++; await sleep(500); }
+            if (document.getElementById('drive-content').value || uploadedFiles.length) { await sendDrive(); sent++; }
+            btn.textContent = '⚡ Send All Filled Sections'; btn.disabled = false;
+            if (!sent) showToast('⚠️ Fill in at least one section!', 'error');
+            else showToast(`🎉 Distributed ${sent} sections direct to Google!`, 'success');
+        }
+
+        function clearSection(type) {
+            const card = document.getElementById('card-' + type);
+            if (card) card.querySelectorAll('input:not([type="date"]):not([type="time"]), textarea').forEach(el => el.value = '');
+        }
+        function showToast(msg, type = 'info') {
+            const c = document.getElementById('toast-container'), t = document.createElement('div');
+            t.className = `toast ${type}`; t.textContent = msg; c.appendChild(t);
+            setTimeout(() => { t.style.animation = 'slideOut 0.4s ease forwards'; setTimeout(() => t.remove(), 400); }, 4000);
+        }
+        function addLog(type, msg, status = 'success') {
+            const log = document.getElementById('log-entries'), e = document.createElement('div');
+            e.className = `log-entry ${status}`;
+            e.innerHTML = `<span class="time">[${new Date().toLocaleTimeString()}]</span> [${type}] ${msg}`;
+            log.insertBefore(e, log.firstChild);
+        }
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+    </script>
+</body>
+</html>

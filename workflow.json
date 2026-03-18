@@ -1,0 +1,626 @@
+{
+  "name": "WhatsApp Smart Data Router",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "a1b2c3d4-1111-4111-8111-111111111111",
+      "name": "WhatsApp Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 460],
+      "webhookId": "whatsapp-incoming"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst body = input.body || input;\n\nlet entry, value, message;\n\ntry {\n  entry = body.entry || input.entry;\n  if (!entry || !entry[0]) throw new Error('No entry');\n  const changes = entry[0].changes;\n  if (!changes || !changes[0]) throw new Error('No changes');\n  value = changes[0].value;\n  if (value.statuses) {\n    return [{ json: { skip: true, reason: 'Status update' } }];\n  }\n  if (!value.messages || !value.messages[0]) {\n    return [{ json: { skip: true, reason: 'No messages' } }];\n  }\n  message = value.messages[0];\n} catch (e) {\n  if (body.test_message) {\n    return [{ json: { from: body.from || '919999999999', timestamp: String(Math.floor(Date.now() / 1000)), messageType: 'text', messageBody: body.test_message, hasMedia: false, mediaId: '', contactName: body.contact_name || 'Test User', fileData: body.fileData || '', fileName: body.fileName || '', fileType: body.fileType || '' } }];\n  }\n  return [{ json: { skip: true, reason: 'Invalid: ' + e.message } }];\n}\n\nconst contacts = value.contacts || [];\nconst contactName = contacts[0] && contacts[0].profile ? contacts[0].profile.name : 'Unknown';\n\nconst result = { from: message.from, timestamp: message.timestamp, messageType: message.type, messageBody: '', hasMedia: false, mediaId: '', mediaMimeType: '', contactName: contactName };\n\nif (message.type === 'text') {\n  result.messageBody = message.text.body;\n} else if (message.type === 'image') {\n  result.messageBody = (message.image.caption) || '[Image received]';\n  result.hasMedia = true;\n  result.mediaId = message.image.id;\n} else if (message.type === 'video') {\n  result.messageBody = (message.video.caption) || '[Video received]';\n  result.hasMedia = true;\n  result.mediaId = message.video.id;\n} else if (message.type === 'document') {\n  result.messageBody = (message.document.caption) || (message.document.filename) || '[Document received]';\n  result.hasMedia = true;\n  result.mediaId = message.document.id;\n  result.fileName = message.document.filename;\n} else if (message.type === 'audio') {\n  result.messageBody = '[Audio message]';\n  result.hasMedia = true;\n  result.mediaId = message.audio.id;\n} else {\n  result.messageBody = '[Unsupported: ' + message.type + ']';\n}\n\nreturn [{ json: result }];"
+      },
+      "id": "a1b2c3d4-2222-4222-8222-222222222222",
+      "name": "Extract Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 460]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=YOUR_GEMINI_API_KEY",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"You are an AI data router. Analyze this WhatsApp message and classify it into EXACTLY ONE category. Respond with ONLY valid JSON, no markdown, no explanation.\\n\\nCategories:\\n1. calendar - dates, times, meetings, reminders, events\\n2. sheet - expenses, sales, data, records, contacts, numbers\\n3. email - send email, mail to, compose, email addresses\\n4. drive - files, documents, images, videos, save, upload\\n5. notion - notes, ideas, meeting minutes, documentation\\n6. trello - tasks, to-dos, assignments, bug reports\\n7. slack - team updates, announcements, alerts, notify team\\n\\nJSON formats:\\ncalendar: {\\\"category\\\":\\\"calendar\\\",\\\"title\\\":\\\"title\\\",\\\"date\\\":\\\"YYYY-MM-DD\\\",\\\"time\\\":\\\"HH:MM\\\",\\\"endTime\\\":\\\"HH:MM\\\",\\\"duration\\\":60,\\\"description\\\":\\\"details\\\",\\\"location\\\":\\\"\\\",\\\"reminder\\\":15}\\nsheet: {\\\"category\\\":\\\"sheet\\\",\\\"sheetName\\\":\\\"tab\\\",\\\"data\\\":{\\\"Col1\\\":\\\"val1\\\"}}\\nemail: {\\\"category\\\":\\\"email\\\",\\\"to\\\":\\\"email\\\",\\\"subject\\\":\\\"subj\\\",\\\"body\\\":\\\"body\\\",\\\"priority\\\":\\\"normal\\\"}\\ndrive: {\\\"category\\\":\\\"drive\\\",\\\"filename\\\":\\\"name\\\",\\\"folder\\\":\\\"folder\\\",\\\"description\\\":\\\"desc\\\"}\\nnotion: {\\\"category\\\":\\\"notion\\\",\\\"title\\\":\\\"title\\\",\\\"content\\\":\\\"content\\\",\\\"tags\\\":[],\\\"type\\\":\\\"note\\\"}\\ntrello: {\\\"category\\\":\\\"trello\\\",\\\"title\\\":\\\"title\\\",\\\"description\\\":\\\"desc\\\",\\\"list\\\":\\\"To Do\\\",\\\"dueDate\\\":\\\"\\\",\\\"assignee\\\":\\\"\\\"}\\nslack: {\\\"category\\\":\\\"slack\\\",\\\"channel\\\":\\\"#general\\\",\\\"message\\\":\\\"msg\\\",\\\"mention\\\":\\\"\\\",\\\"priority\\\":\\\"normal\\\"}\\n\\nRules: Only JSON output. Convert relative dates (today is {{ $now.format('yyyy-MM-dd') }}, {{ $now.format('EEEE') }}). If media attached default to drive.\\n\\nMessage from: {{ $json.contactName }} ({{ $json.from }})\\nType: {{ $json.messageType }}, HasMedia: {{ $json.hasMedia }}\\nMessage: {{ $json.messageBody }}\"\n    }]\n  }],\n  \"generationConfig\": {\n    \"temperature\": 0.1,\n    \"maxOutputTokens\": 1500,\n    \"responseMimeType\": \"application/json\"\n  }\n}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-3333-4333-8333-333333333333",
+      "name": "AI Classifier",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 460]
+    },
+    {
+      "parameters": {
+        "jsCode": "const aiResponse = $input.first().json;\nlet responseText = '';\n\n// Handle Gemini API response format\nif (aiResponse.candidates && aiResponse.candidates[0]) {\n  responseText = aiResponse.candidates[0].content.parts[0].text;\n} else if (aiResponse.message && aiResponse.message.content) {\n  responseText = aiResponse.message.content;\n} else if (aiResponse.text) {\n  responseText = aiResponse.text;\n} else {\n  responseText = JSON.stringify(aiResponse);\n}\n\nresponseText = responseText.replace(/```json\\n?/gi, '').replace(/```\\n?/g, '').trim();\n\nconst jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\nif (jsonMatch) responseText = jsonMatch[0];\n\ntry {\n  const parsed = JSON.parse(responseText);\n  const validCats = ['calendar','sheet','email','drive','notion','trello','slack'];\n  if (!validCats.includes(parsed.category)) parsed.category = 'unknown';\n\n  const ext = $('Extract Message');\n  if (ext) {\n    parsed._from = ext.first().json.from;\n    parsed._contactName = ext.first().json.contactName;\n    parsed._messageType = ext.first().json.messageType;\n    parsed._hasMedia = ext.first().json.hasMedia;\n    parsed._mediaId = ext.first().json.mediaId;\n    parsed._originalMessage = ext.first().json.messageBody;\n    parsed._fileName = ext.first().json.fileName || '';\n  }\n  return [{ json: parsed }];\n} catch (e) {\n  return [{ json: { category: 'unknown', error: e.message, rawResponse: responseText, _from: '', _contactName: '' } }];\n}"
+      },
+      "id": "a1b2c3d4-4444-4444-8444-444444444444",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 460]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "cond-cal",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "calendar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Calendar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "cond-sheet",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "sheet",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Sheets"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "cond-email",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "email",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Email"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "cond-drive",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "drive",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Drive"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "cond-notion",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "notion",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Notion"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "cond-trello",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "trello",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Trello"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "cond-slack",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "slack",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Slack"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-5555-4555-8555-555555555555",
+      "name": "Route by Category",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [1200, 460]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nlet msg = '';\n\nif (input.category === 'calendar') {\n  msg = 'Calendar Event Created!\\nTitle: ' + input.title + '\\nDate: ' + input.date + '\\nTime: ' + (input.time || '09:00');\n} else if (input.category === 'sheet') {\n  msg = 'Data Added to Spreadsheet!\\nSheet: ' + (input.sheetName || 'General') + '\\nFields: ' + Object.keys(input.data || {}).join(', ');\n} else if (input.category === 'email') {\n  msg = 'Email Sent!\\nTo: ' + input.to + '\\nSubject: ' + input.subject;\n} else if (input.category === 'drive') {\n  msg = 'File Saved to Drive!\\nFile: ' + (input.filename || 'upload') + '\\nFolder: ' + (input.folder || 'WhatsApp Uploads');\n} else if (input.category === 'notion') {\n  msg = 'Notion Page Created!\\nTitle: ' + input.title;\n} else if (input.category === 'trello') {\n  msg = 'Trello Card Created!\\nTask: ' + input.title + '\\nList: ' + (input.list || 'To Do');\n} else if (input.category === 'slack') {\n  msg = 'Slack Message Sent!\\nChannel: ' + (input.channel || '#general');\n} else {\n  msg = 'Could not classify this message. Please try again.';\n}\n\nreturn [{ json: { ...input, confirmationMessage: msg } }];"
+      },
+      "id": "a1b2c3d4-6666-4666-8666-666666666666",
+      "name": "Generate Confirmation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1500, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/YOUR_PHONE_NUMBER_ID/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json._from }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": false,\n    \"body\": \"{{ $json.confirmationMessage }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-7777-4777-8777-777777777777",
+      "name": "WhatsApp Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1740, 0]
+    },
+    {
+      "parameters": {
+        "resource": "event",
+        "operation": "create",
+        "calendar": {
+          "__rl": true,
+          "mode": "list",
+          "value": "primary"
+        },
+        "start": "={{ $json.date }}T{{ $json.time || '09:00' }}:00",
+        "end": "={{ $json.date }}T{{ $json.endTime || '10:00' }}:00",
+        "additionalFields": {
+          "summary": "={{ $json.title }}",
+          "description": "={{ $json.description || '' }}"
+        }
+      },
+      "id": "a1b2c3d4-8888-4888-8888-888888888888",
+      "name": "Google Calendar",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1,
+      "position": [1500, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst now = new Date().toISOString();\nconst sheetRow = { Timestamp: now, From: data._contactName || 'Unknown', Phone: data._from || '' };\nif (data.data) { Object.assign(sheetRow, data.data); }\nreturn [{ json: sheetRow }];"
+      },
+      "id": "a1b2c3d4-9999-4999-8999-999999999999",
+      "name": "Prepare Sheet Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1500, 400]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1hnixAqNBmwnXKiq1HH3RW3oKgd5N9Sx0FdxP1G23YBk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {}
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "name": "Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [1740, 400]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "text",
+        "message": "={{ $json.body }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "name": "Gmail Send",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1500, 600]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nlet binary;\nif (data.fileData && data.fileData.startsWith('data:')) {\n  const parts = data.fileData.split(',');\n  const meta = parts[0];\n  const base64Data = parts[1];\n  const mimeType = meta.match(/data:(.*?);/)[1];\n  const ext = mimeType.split('/')[1] || 'bin';\n  const fileName = data.filename || ('upload.' + ext);\n  binary = { data: { data: base64Data, mimeType: mimeType, fileName: fileName, fileExtension: ext } };\n} else {\n  const content = 'From: ' + (data._contactName || 'Dashboard') + '\\nDate: ' + new Date().toISOString() + '\\nContent: ' + (data.description || data._originalMessage || 'No content');\n  const buffer = Buffer.from(content, 'utf-8');\n  binary = { data: { data: buffer.toString('base64'), mimeType: 'text/plain', fileName: (data.filename || 'note') + '.txt', fileExtension: 'txt' } };\n}\nreturn [{ json: data, binary: binary }];"
+      },
+      "id": "a1b2c3d4-cccc-4ccc-8ccc-cccccccccccc",
+      "name": "Create File for Drive",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1500, 800]
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "name": "={{ $json.filename || 'whatsapp_upload' }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-dddd-4ddd-8ddd-dddddddddddd",
+      "name": "Google Drive Upload",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [1740, 800]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nreturn [{ json: { ...data, confirmationMessage: 'Notion Page Created!\\nTitle: ' + (data.title || 'WhatsApp Note') } }];"
+      },
+      "id": "a1b2c3d4-eeee-4eee-8eee-eeeeeeeeeeee",
+      "name": "Notion Placeholder",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1500, 1000]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nreturn [{ json: { ...data, confirmationMessage: 'Trello Card Created!\\nTask: ' + (data.title || 'New Task') + '\\nList: ' + (data.list || 'To Do') } }];"
+      },
+      "id": "a1b2c3d4-ffff-4fff-8fff-ffffffffffff",
+      "name": "Trello Placeholder",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1500, 1200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nreturn [{ json: { ...data, confirmationMessage: 'Slack Message Sent!\\nChannel: ' + (data.channel || '#general') } }];"
+      },
+      "id": "a1b2c3d4-1234-4234-8234-123456789abc",
+      "name": "Slack Placeholder",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1500, 1400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nreturn [{ json: { ...data, category:'unknown', confirmationMessage: 'Could not understand. Try:\\n- Schedule meeting tomorrow 3pm\\n- Add expense Coffee 200\\n- Send email to x@y.com\\n- Send any file/image\\n- Note: meeting discussion\\n- Task: do something by Friday\\n- Notify team about update' } }];"
+      },
+      "id": "a1b2c3d4-5678-4678-8678-567890abcdef",
+      "name": "Unknown Handler",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1500, 1600]
+    }
+  ],
+  "connections": {
+    "WhatsApp Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Message": {
+      "main": [
+        [
+          {
+            "node": "AI Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Classifier": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Response": {
+      "main": [
+        [
+          {
+            "node": "Route by Category",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Category": {
+      "main": [
+        [
+          {
+            "node": "Google Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Sheet Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gmail Send",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create File for Drive",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notion Placeholder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Trello Placeholder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Slack Placeholder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unknown Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Calendar": {
+      "main": [
+        [
+          {
+            "node": "Generate Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Sheet Data": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Generate Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Send": {
+      "main": [
+        [
+          {
+            "node": "Generate Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create File for Drive": {
+      "main": [
+        [
+          {
+            "node": "Google Drive Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive Upload": {
+      "main": [
+        [
+          {
+            "node": "Generate Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion Placeholder": {
+      "main": [
+        [
+          {
+            "node": "Generate Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trello Placeholder": {
+      "main": [
+        [
+          {
+            "node": "Generate Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack Placeholder": {
+      "main": [
+        [
+          {
+            "node": "Generate Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unknown Handler": {
+      "main": [
+        [
+          {
+            "node": "Generate Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Confirmation": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "versionId": "1"
+}
