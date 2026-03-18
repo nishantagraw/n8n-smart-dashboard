@@ -254,7 +254,7 @@
                 <div class="log-entry"><span class="time">[Ready]</span> Dashboard loaded. Send directly to endpoints.</div>
             </div>
         </div>
-        <div class="footer">Powered by <a href="http://localhost:5678" target="_blank">n8n</a> (Direct Endpoints) &bull; Infinite Club &copy; 2026</div>
+        <div class="footer">Powered by <a href="https://n8n-smart-dashboard-production.up.railway.app" target="_blank">n8n</a> (Direct Endpoints) &bull; Infinite Club &copy; 2026</div>
     </div>
     <div class="toast-container" id="toast-container"></div>
 
@@ -266,7 +266,7 @@
             if (spinner) spinner.style.display = 'block';
             try {
                 // Ensure the payload matches exactly what n8n node expects in $json
-                const r = await fetch('http://localhost:5678/webhook/' + path, {
+                const r = await fetch('https://n8n-smart-dashboard-production.up.railway.app/webhook/' + path, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
